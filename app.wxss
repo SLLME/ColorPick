@@ -1,0 +1,63 @@
+/* app.wxss 全局样式 */
+page {
+  --c-bg: #F5F5F7;
+  --c-card: #FFFFFF;
+  --c-text: #1A1A1E;
+  --c-sub: #8A8A8E;
+  --c-line: #E8E8ED;
+  --c-primary: #FF5A3C;
+
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", sans-serif;
+  font-size: 28rpx;
+}
+
+view, text, button, input {
+  box-sizing: border-box;
+}
+
+.card {
+  background: var(--c-card);
+  border-radius: 24rpx;
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+}
+
+.card-title {
+  font-size: 26rpx;
+  font-weight: 600;
+  color: var(--c-text);
+  margin-bottom: 20rpx;
+}
+
+.mono {
+  font-family: "SF Mono", Menlo, Consolas, monospace;
+}
+
+.btn-primary {
+  background: var(--c-primary);
+  color: #fff;
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  font-weight: 600;
+  border: none;
+  line-height: 2.6;
+}
+
+.btn-primary::after {
+  border: none;
+}
+
+.btn-ghost {
+  background: #F0F0F4;
+  color: var(--c-text);
+  border-radius: 16rpx;
+  font-size: 30rpx;
+  border: none;
+  line-height: 2.6;
+}
+
+.btn-ghost::after {
+  border: none;
+}

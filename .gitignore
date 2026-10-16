@@ -1,0 +1,19 @@
+# 依赖
+node_modules/
+miniprogram_npm/
+
+# 微信开发者工具本地私有配置（含本机设置，勿提交）
+project.private.config.json
+
+# 构建产物 / 缓存
+dist/
+*.log
+
+# 编辑器 / 系统
+.DS_Store
+.idea/
+.vscode/
+Thumbs.db
+
+# AI 工作区数据
+.workbuddy-ai/

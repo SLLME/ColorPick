@@ -1,0 +1,96 @@
+<view class="page">
+
+  <!-- 空状态 -->
+  <view class="empty" wx:if="{{!list.length}}">
+    <view class="empty-icon">▦</view>
+    <view class="empty-title">色卡还是空的</view>
+    <view class="empty-desc">去「取色」页从图片中提取颜色，点击「存入色卡」即可收藏</view>
+    <button class="btn-ghost empty-btn" bindtap="goPicker">去取色</button>
+  </view>
+
+  <block wx:else>
+    <!-- 概览 -->
+    <view class="overview">
+      <view class="ov-num">{{list.length}}</view>
+      <view class="ov-label">个收藏颜色</view>
+      <view class="ov-actions">
+        <text class="ov-link" bindtap="exportAll">导出全部色值</text>
+        <text class="ov-link danger" bindtap="clearAll">清空</text>
+      </view>
+    </view>
+
+    <!-- 色卡网格 -->
+    <view class="grid">
+      <view
+        class="grid-item"
+        wx:for="{{list}}"
+        wx:key="hex"
+        bindtap="onShowDetail"
+        data-index="{{index}}"
+      >
+        <view class="grid-swatch" style="background:{{item.hex}};">
+          <text class="grid-hex mono" style="color:{{item.textColor}};">{{item.hex}}</text>
+        </view>
+        <view class="grid-foot">
+          <text class="grid-name">{{item.name || '未命名'}}</text>
+          <text class="grid-del" catchtap="onDelete" data-index="{{index}}">删除</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="hint">点击色卡查看详情，长按可快速复制</view>
+  </block>
+
+  <!-- 详情弹层 -->
+  <view class="mask" wx:if="{{detail}}" bindtap="closeDetail">
+    <view class="sheet" catchtap="noop">
+      <view class="sheet-swatch" style="background:{{detail.hex}};">
+        <text class="sheet-hex mono" style="color:{{detail.textColor}};">{{detail.hex}}</text>
+      </view>
+
+      <view class="sheet-body">
+        <input
+          class="sheet-name"
+          placeholder="给这个颜色起个名字"
+          value="{{detail.name}}"
+          bindinput="onNameInput"
+          maxlength="20"
+        />
+
+        <view class="fmt-list">
+          <view class="fmt-item" wx:for="{{detailFormats}}" wx:key="key" bindtap="onCopyOne" data-key="{{item.key}}">
+            <text class="fmt-label">{{item.label}}</text>
+            <text class="fmt-val mono">{{item.value}}</text>
+            <text class="fmt-copy">复制</text>
+          </view>
+        </view>
+
+        <!-- 详情里的配色 -->
+        <view class="sub-title">配色方案</view>
+        <view class="harmony" wx:for="{{detail.harmonies}}" wx:key="name" wx:for-item="g">
+          <view class="harmony-head">
+            <text class="harmony-name">{{g.name}}</text>
+            <text class="harmony-desc">{{g.desc}}</text>
+          </view>
+          <view class="harmony-strip">
+            <view
+              class="harmony-chip"
+              wx:for="{{g.colors}}"
+              wx:key="*this"
+              wx:for-item="c"
+              style="background:{{c.hex}}; color:{{c.textColor}};"
+              data-hex="{{c.hex}}"
+              bindtap="onAddFromHarmony"
+            >{{c.hex}}</view>
+          </view>
+        </view>
+      </view>
+
+      <view class="sheet-btns">
+        <button class="btn-ghost flex1" bindtap="onCopyDetail">复制色值</button>
+        <button class="btn-primary flex1" bindtap="onSaveName">完成</button>
+      </view>
+    </view>
+  </view>
+
+</view>

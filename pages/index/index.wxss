@@ -1,0 +1,576 @@
+.page {
+  min-height: 100vh;
+  padding: 24rpx;
+  padding-bottom: 60rpx;
+}
+
+/*
+  有图时固定为一屏高度、页面本身不滚动。
+  图片区高度受限，取色结果放在独立 scroll-view 里滚动，
+  两者不再抢手势；同时页面不滚动也保证了取色坐标始终有效。
+*/
+.page-fixed {
+  box-sizing: border-box;
+  height: 100vh;
+  min-height: 0;
+  padding-bottom: 24rpx;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ---------- 空状态 ---------- */
+.hero {
+  padding: 160rpx 40rpx 0;
+  text-align: center;
+}
+
+.hero-icon {
+  font-size: 140rpx;
+  color: var(--c-primary);
+  line-height: 1;
+  margin-bottom: 32rpx;
+}
+
+.hero-title {
+  font-size: 48rpx;
+  font-weight: 700;
+  letter-spacing: 2rpx;
+}
+
+.hero-desc {
+  margin-top: 20rpx;
+  font-size: 28rpx;
+  color: var(--c-sub);
+  line-height: 1.7;
+}
+
+.hero-actions {
+  margin-top: 72rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 24rpx;
+}
+
+.hero-btn {
+  width: 100%;
+}
+
+.hero-tip {
+  margin-top: 40rpx;
+  font-size: 24rpx;
+  color: #B0B0B6;
+}
+
+/* ---------- 图片舞台 ---------- */
+
+/* 包裹层：宽度由 CSS 决定（稳定参照物），高度由 JS 按图片比例算出 */
+.stage-wrap {
+  width: 100%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16rpx;
+}
+
+/* 尺寸由内联样式指定，恰好等于图片显示尺寸 */
+.stage {
+  position: relative;
+  border-radius: 24rpx;
+  overflow: visible;
+  background: #EDEDF2;
+}
+
+.stage-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 24rpx;
+}
+
+.stage-canvas {
+  display: block;
+  border-radius: 24rpx;
+}
+
+/* 取色结果滚动区：占据图片区与提示栏之外的全部剩余高度 */
+.detail-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.marker {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+
+.marker-ring {
+  position: absolute;
+  left: -34rpx;
+  top: -34rpx;
+  width: 68rpx;
+  height: 68rpx;
+  border: 4rpx solid #fff;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2rpx rgba(0, 0, 0, 0.35), 0 2rpx 12rpx rgba(0, 0, 0, 0.3);
+}
+
+.marker-dot {
+  position: absolute;
+  left: -5rpx;
+  top: -5rpx;
+  width: 10rpx;
+  height: 10rpx;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2rpx rgba(255, 255, 255, 0.9);
+}
+
+/* 取样方框：位置与边长由内联样式给出，恰好等于取样区域。
+   白描边 + 外圈深色描边，浅底靠深圈、深底靠白线，任何底色上都看得见。
+   框本身很小（最小 5px），描边不能再加内圈，否则框内几乎没剩多少面积。 */
+.marker-box {
+  position: absolute;
+  border: 2rpx solid rgba(255, 255, 255, 0.95);
+  border-radius: 4rpx;
+  box-shadow: 0 0 0 2rpx rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
+
+.hint-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8rpx 8rpx 20rpx;
+  flex-shrink: 0;
+}
+
+.hint-text {
+  font-size: 24rpx;
+  color: var(--c-sub);
+}
+
+.hint-actions {
+  display: flex;
+  gap: 28rpx;
+}
+
+.hint-link {
+  font-size: 26rpx;
+  color: var(--c-primary);
+  font-weight: 500;
+}
+
+/* ---------- 放大镜 ---------- */
+.magnifier {
+  position: fixed;
+  width: 220rpx;
+  height: 220rpx;
+  border-radius: 50%;
+  overflow: hidden;
+  border: 6rpx solid #fff;
+  box-shadow: 0 8rpx 40rpx rgba(0, 0, 0, 0.45);
+  z-index: 99;
+  pointer-events: none;
+}
+
+.magnifier-inner {
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+}
+
+.magnifier-cross-h,
+.magnifier-cross-v {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.85);
+  pointer-events: none;
+}
+
+.magnifier-cross-h {
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 2rpx;
+  box-shadow: 0 0 4rpx rgba(0, 0, 0, 0.6);
+}
+
+.magnifier-cross-v {
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  width: 2rpx;
+  box-shadow: 0 0 4rpx rgba(0, 0, 0, 0.6);
+}
+
+.magnifier-tag {
+  position: absolute;
+  left: 50%;
+  bottom: 10rpx;
+  transform: translateX(-50%);
+  font-size: 22rpx;
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+  font-weight: 600;
+}
+
+/* ---------- 当前颜色 ---------- */
+.color-head {
+  display: flex;
+  gap: 24rpx;
+}
+
+.swatch-lg {
+  width: 220rpx;
+  height: 220rpx;
+  border-radius: 20rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 12rpx;
+  box-shadow: inset 0 0 0 2rpx rgba(0, 0, 0, 0.06);
+}
+
+.swatch-coord {
+  font-size: 20rpx;
+  opacity: 0.85;
+}
+
+.color-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.hex-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 12rpx;
+}
+
+.hex-val {
+  font-size: 44rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+}
+
+.copy-chip {
+  font-size: 22rpx;
+  color: var(--c-primary);
+  border: 2rpx solid var(--c-primary);
+  border-radius: 20rpx;
+  padding: 2rpx 16rpx;
+}
+
+.meta-sub {
+  font-size: 24rpx;
+  color: var(--c-sub);
+  line-height: 1.7;
+}
+
+.color-btns {
+  display: flex;
+  gap: 20rpx;
+  margin-top: 28rpx;
+}
+
+.flex1 {
+  flex: 1;
+}
+
+/* ---------- 取样范围 ---------- */
+.seg {
+  display: flex;
+  gap: 16rpx;
+}
+
+.seg-item {
+  flex: 1;
+  padding: 18rpx 0;
+  border-radius: 16rpx;
+  background: #F0F0F4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+}
+
+.seg-on {
+  background: rgba(255, 90, 60, 0.12);
+  box-shadow: inset 0 0 0 2rpx var(--c-primary);
+}
+
+.seg-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  color: var(--c-text);
+}
+
+.seg-on .seg-label {
+  color: var(--c-primary);
+}
+
+.seg-desc {
+  font-size: 21rpx;
+  color: var(--c-sub);
+}
+
+.sample-hint {
+  margin-top: 20rpx;
+  font-size: 23rpx;
+  color: var(--c-sub);
+  line-height: 1.6;
+}
+
+/* ---------- 对比度 ---------- */
+.ct-preview {
+  border-radius: 18rpx;
+  padding: 28rpx 24rpx;
+  display: flex;
+  flex-direction: column;
+  gap: 8rpx;
+  box-shadow: inset 0 0 0 2rpx rgba(0, 0, 0, 0.06);
+}
+
+.ct-preview-title {
+  font-size: 40rpx;
+  font-weight: 700;
+  letter-spacing: 1rpx;
+}
+
+.ct-preview-sub {
+  font-size: 26rpx;
+  opacity: 0.85;
+}
+
+.ct-list {
+  margin-top: 20rpx;
+  display: flex;
+  flex-direction: column;
+}
+
+.ct-row {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  padding: 18rpx 0;
+  border-bottom: 2rpx solid var(--c-line);
+}
+
+.ct-row:last-child {
+  border-bottom: none;
+}
+
+.ct-dot {
+  width: 36rpx;
+  height: 36rpx;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 2rpx rgba(0, 0, 0, 0.18);
+}
+
+.ct-name {
+  flex: 1;
+  font-size: 26rpx;
+}
+
+.ct-ratio {
+  font-size: 26rpx;
+  color: var(--c-sub);
+  flex-shrink: 0;
+}
+
+.ct-badge {
+  flex-shrink: 0;
+  margin-left: 14rpx;
+  font-size: 21rpx;
+  font-weight: 600;
+  padding: 4rpx 14rpx;
+  border-radius: 20rpx;
+}
+
+.ct-aaa,
+.ct-aa {
+  background: rgba(28, 168, 92, 0.14);
+  color: #1CA85C;
+}
+
+.ct-large {
+  background: rgba(230, 150, 20, 0.16);
+  color: #B8790E;
+}
+
+.ct-fail {
+  background: #F0F0F4;
+  color: var(--c-sub);
+}
+
+.ct-foot {
+  margin-top: 20rpx;
+  font-size: 25rpx;
+}
+
+.ct-foot-em {
+  color: var(--c-primary);
+  font-weight: 600;
+  margin: 0 4rpx;
+}
+
+.ct-note {
+  margin-top: 8rpx;
+  font-size: 21rpx;
+  color: #B0B0B6;
+}
+
+/* ---------- 格式列表 ---------- */
+.fmt-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.fmt-item {
+  display: flex;
+  align-items: center;
+  padding: 22rpx 0;
+  border-bottom: 2rpx solid var(--c-line);
+}
+
+.fmt-item:last-child {
+  border-bottom: none;
+}
+
+.fmt-label {
+  width: 120rpx;
+  font-size: 26rpx;
+  color: var(--c-sub);
+  flex-shrink: 0;
+}
+
+.fmt-val {
+  flex: 1;
+  font-size: 26rpx;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.fmt-copy {
+  font-size: 24rpx;
+  color: var(--c-primary);
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
+
+/* 卡片标题行：左标题 + 右侧操作提示 */
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 20rpx;
+}
+
+/* 标题行内的标题不再自己留底边距，交给 .card-head 统一控制 */
+.card-head .card-title {
+  margin-bottom: 0;
+}
+
+.card-tip {
+  font-size: 22rpx;
+  color: var(--c-sub);
+}
+
+/* ---------- 配色 ---------- */
+.harmony {
+  margin-bottom: 32rpx;
+}
+
+.harmony:last-child {
+  margin-bottom: 0;
+}
+
+.harmony-head {
+  display: flex;
+  align-items: baseline;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.harmony-name {
+  font-size: 27rpx;
+  font-weight: 600;
+}
+
+.harmony-desc {
+  font-size: 22rpx;
+  color: var(--c-sub);
+}
+
+.harmony-strip {
+  display: flex;
+  gap: 10rpx;
+}
+
+.harmony-chip {
+  flex: 1;
+  height: 110rpx;
+  border-radius: 14rpx;
+  font-size: 20rpx;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 10rpx;
+  font-family: "SF Mono", Menlo, monospace;
+  box-shadow: inset 0 0 0 2rpx rgba(0, 0, 0, 0.05);
+}
+
+/* ---------- 主色 ---------- */
+.dom-list {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.dom-item {
+  display: flex;
+  align-items: center;
+  gap: 20rpx;
+}
+
+.dom-swatch {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 14rpx;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 0 2rpx rgba(0, 0, 0, 0.07);
+}
+
+.dom-hex {
+  width: 160rpx;
+  font-size: 25rpx;
+  flex-shrink: 0;
+}
+
+.dom-bar {
+  flex: 1;
+  height: 14rpx;
+  background: #EDEDF2;
+  border-radius: 7rpx;
+  overflow: hidden;
+}
+
+.dom-bar-in {
+  height: 100%;
+  background: var(--c-primary);
+  border-radius: 7rpx;
+}
+
+.dom-pct {
+  width: 80rpx;
+  text-align: right;
+  font-size: 23rpx;
+  color: var(--c-sub);
+  flex-shrink: 0;
+}

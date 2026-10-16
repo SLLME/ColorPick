@@ -1,0 +1,233 @@
+<view class="page {{imageSrc ? 'page-fixed' : ''}}">
+
+  <!-- 无图：引导区 -->
+  <block wx:if="{{!imageSrc}}">
+    <view class="hero">
+      <view class="hero-icon">◎</view>
+      <view class="hero-title">拍照取色</view>
+      <view class="hero-desc">拍摄或选择一张图片，点击取色，长按拖动可放大精确定位</view>
+      <view class="hero-actions">
+        <button class="btn-primary hero-btn" bindtap="onTakePhoto">拍照</button>
+        <button class="btn-ghost hero-btn" bindtap="onChooseAlbum">从相册选择</button>
+      </view>
+      <view class="hero-tip">支持 PNG / JPG / WebP，单张不超过 10MB</view>
+    </view>
+  </block>
+
+  <!-- 有图：取色工作区 -->
+  <block wx:else>
+
+    <!--
+      图片区。高度由 JS 按「完整显示 + 不超过视口 50%」算出，
+      所以无论竖拍还是横拍，整图都看得见，下方也始终留有充足空间。
+      #stageWrap 宽度由 CSS 决定、与图片无关，是计算显示尺寸的稳定参照物。
+    -->
+    <view class="stage-wrap" id="stageWrap" style="height:{{stageWrapH}}px;">
+      <view class="stage" id="stage" style="{{stageStyle}}">
+        <image
+          wx:if="{{!drawing}}"
+          class="stage-img"
+          src="{{imageSrc}}"
+          mode="aspectFit"
+          bindload="onImageLoad"
+        />
+        <canvas
+          wx:if="{{drawing}}"
+          type="2d"
+          id="pickerCanvas"
+          class="stage-canvas"
+          style="{{canvasStyle}}"
+          disable-scroll="{{true}}"
+          bindtouchstart="onTouchStart"
+          bindtouchmove="onTouchMove"
+          bindtouchend="onTouchEnd"
+          bindtouchcancel="onTouchEnd"
+        ></canvas>
+
+        <!-- 选点标记 -->
+        <view
+          wx:if="{{hasPoint}}"
+          class="marker"
+          style="left:{{point.x}}px; top:{{point.y}}px;"
+        >
+          <!--
+            取样范围大于 1 像素时显示方框，让「平均了多大一块」看得见。
+            此时不再画圆环：圆环直径是固定的，和取样方框大小对不上，
+            两个尺寸不一致的图形叠在一起会让人误判取样范围。
+            单像素档方框只有 1px 看不见，才用圆环来指示触点。
+          -->
+          <view
+            wx:if="{{sampleSize > 1}}"
+            class="marker-box"
+            style="{{sampleBoxStyle}}"
+          ></view>
+          <view wx:else class="marker-ring" style="border-color:{{current.textColor}};"></view>
+          <view class="marker-dot" style="background:{{current.hex}};"></view>
+        </view>
+      </view>
+    </view>
+
+    <view class="hint-bar">
+      <text class="hint-text">{{drawing ? '点击取色 · 长按拖动放大镜精调' : '正在解码图片…'}}</text>
+      <view class="hint-actions">
+        <text class="hint-link" bindtap="onTakePhoto">重拍</text>
+        <text class="hint-link" bindtap="onChooseAlbum">换图</text>
+      </view>
+    </view>
+
+    <!--
+      放大镜必须放在 scroll-view 之外：
+      scroll-view 内部可能使用 transform，会让 position:fixed 失效。
+    -->
+    <view
+      wx:if="{{magnifier.show}}"
+      class="magnifier"
+      style="left:{{magnifier.x}}px; top:{{magnifier.y}}px;"
+    >
+      <view
+        class="magnifier-inner"
+        style="background-image:url('{{magnifier.bg}}'); background-size:{{magnifier.zoomW}}px {{magnifier.zoomH}}px; background-position:-{{magnifier.offsetX}}px -{{magnifier.offsetY}}px;"
+      ></view>
+      <view class="magnifier-cross-h"></view>
+      <view class="magnifier-cross-v"></view>
+      <view class="magnifier-tag mono" style="background:{{current.hex}}; color:{{current.textColor}};">{{current.hex}}</view>
+    </view>
+
+    <!-- 取色结果独立滚动，不再和图片抢手势 -->
+    <scroll-view class="detail-scroll" scroll-y>
+
+      <!-- 当前颜色 -->
+      <view class="card color-card">
+        <view class="color-head">
+          <view class="swatch-lg" style="background:{{current.hex}};">
+            <view class="swatch-coord mono" style="color:{{current.textColor}};">{{current.coordText}}</view>
+          </view>
+          <view class="color-meta">
+            <view class="hex-row">
+              <text class="hex-val mono">{{current.hex}}</text>
+              <view class="copy-chip" bindtap="onCopy" data-key="hex">复制</view>
+            </view>
+            <view class="meta-sub mono">RGB {{current.r}}, {{current.g}}, {{current.b}}</view>
+            <view class="meta-sub mono">{{current.hslStr}}</view>
+            <view class="meta-sub mono">{{current.hsvStr}}</view>
+            <view class="meta-sub mono">{{current.cmykStr}}</view>
+          </view>
+        </view>
+        <view class="color-btns">
+          <button class="btn-primary flex1" bindtap="onSaveColor">存入色卡</button>
+          <button class="btn-ghost flex1" bindtap="onCopy" data-key="rgb">复制 RGB</button>
+        </view>
+      </view>
+
+      <!-- 取样范围 -->
+      <view class="card">
+        <view class="card-title">取样范围</view>
+        <view class="seg">
+          <view
+            class="seg-item {{sampleSize === item.size ? 'seg-on' : ''}}"
+            wx:for="{{sampleList}}"
+            wx:key="size"
+            data-size="{{item.size}}"
+            bindtap="onPickSample"
+          >
+            <text class="seg-label">{{item.label}}</text>
+            <text class="seg-desc">{{item.desc}}</text>
+          </view>
+        </view>
+        <view class="sample-hint">{{sampleHint || '取一小块区域求平均，可减少噪点带来的偏差'}}</view>
+      </view>
+
+      <!-- 对比度 -->
+      <view class="card" wx:if="{{current.contrast}}">
+        <view class="card-title">对比度</view>
+
+        <!-- 预览：把该色当背景，配推荐的文字色 -->
+        <view
+          class="ct-preview"
+          style="background:{{current.hex}}; color:{{current.contrast.bestText}};"
+        >
+          <text class="ct-preview-title">示例文字 Aa</text>
+          <text class="ct-preview-sub">正文效果预览</text>
+        </view>
+
+        <view class="ct-list">
+          <view class="ct-row" wx:for="{{current.contrast.list}}" wx:key="name">
+            <view class="ct-dot" style="background:{{item.text}};"></view>
+            <text class="ct-name">{{item.name}}</text>
+            <text class="ct-ratio mono">{{item.ratioText}}</text>
+            <view class="ct-badge ct-{{item.grade.key}}">{{item.grade.label}}</view>
+          </view>
+        </view>
+
+        <view class="ct-foot">
+          推荐<text class="ct-foot-em">{{current.contrast.bestName}}</text>，对比度 {{current.contrast.bestRatioText}}
+        </view>
+        <view class="ct-note">AA 是普通正文的达标线，AAA 更严格</view>
+      </view>
+
+      <!-- 格式列表 -->
+      <view class="card">
+        <view class="card-title">色值格式</view>
+        <view class="fmt-list">
+          <view class="fmt-item" wx:for="{{formatList}}" wx:key="key" bindtap="onCopy" data-key="{{item.key}}">
+            <text class="fmt-label">{{item.label}}</text>
+            <text class="fmt-val mono">{{item.value}}</text>
+            <text class="fmt-copy">复制</text>
+          </view>
+        </view>
+      </view>
+
+      <!-- 配色推荐 -->
+      <view class="card">
+        <view class="card-head">
+          <view class="card-title">配色方案</view>
+          <view class="card-tip">点击复制色值</view>
+        </view>
+        <view class="harmony" wx:for="{{harmonyList}}" wx:key="name" wx:for-item="group">
+          <view class="harmony-head">
+            <text class="harmony-name">{{group.name}}</text>
+            <text class="harmony-desc">{{group.desc}}</text>
+          </view>
+          <view class="harmony-strip">
+            <view
+              class="harmony-chip"
+              wx:for="{{group.colors}}"
+              wx:key="*this"
+              wx:for-item="c"
+              style="background:{{c.hex}}; color:{{c.textColor}};"
+              data-hex="{{c.hex}}"
+              bindtap="onPickHarmony"
+            >{{c.hex}}</view>
+          </view>
+        </view>
+      </view>
+
+      <!-- 图片主色 -->
+      <view class="card" wx:if="{{dominantList.length}}">
+        <view class="card-head">
+          <view class="card-title">图片主色</view>
+          <view class="card-tip">点击复制色值</view>
+        </view>
+        <view class="dom-list">
+          <view
+            class="dom-item"
+            wx:for="{{dominantList}}"
+            wx:key="hex"
+            bindtap="onPickDominant"
+            data-index="{{index}}"
+          >
+            <view class="dom-swatch" style="background:{{item.hex}};"></view>
+            <text class="dom-hex mono">{{item.hex}}</text>
+            <view class="dom-bar">
+              <view class="dom-bar-in" style="width:{{item.percent}}%;"></view>
+            </view>
+            <text class="dom-pct">{{item.percent}}%</text>
+          </view>
+        </view>
+      </view>
+
+    </scroll-view>
+
+  </block>
+
+</view>
